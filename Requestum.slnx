@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Requestum/Requestum.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Requestum.Benchmarks/Requestum.Benchmarks.csproj" />
+    <Project Path="tests/Requestum.Tests/Requestum.Tests.csproj" />
+  </Folder>
+</Solution>
