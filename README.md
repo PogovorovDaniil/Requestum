@@ -12,6 +12,7 @@
 
 * 🎯 **Clear separation** of Commands, Queries, and Events (CQRS + Event-driven architecture)
 * 💪 **Strongly-typed handlers** for sync and async execution
+* 🔄 **Commands with return values** for operations that both modify state and return results
 * 📢 **Event publishing** with multiple receivers support
 * 🔌 **Middleware pipeline** support for cross-cutting concerns
 * 🏗️ **Dependency Injection** integration with `Microsoft.Extensions.DependencyInjection`
@@ -40,6 +41,10 @@ Requestum provides dedicated interfaces for commands, queries, and events, makin
 // Commands that modify state
 public record CreateUserCommand : ICommand;
 public record DeleteUserCommand(int UserId) : ICommand;
+
+// Commands that modify state and return a result
+public record CreateUserCommand : ICommand<int>; // Returns user ID
+public record ProcessOrderCommand(int OrderId) : ICommand<OrderResult>;
 
 // Queries that retrieve data
 public record GetUserQuery(int Id) : IQuery<UserDto>;
@@ -131,9 +136,13 @@ public class CreateUserHandler : IAsyncCommandHandler<CreateUserCommand>
 Requestum provides dedicated methods for commands, queries, and events, making your code self-documenting:
 
 ```csharp
-// Commands execute
+// Commands execute (without return value)
 await _requestum.ExecuteAsync(new CreateUserCommand());
 _requestum.Execute(new ValidateUserCommand());
+
+// Commands execute and return results
+var userId = await _requestum.ExecuteAsync<CreateUserCommand, int>(new CreateUserCommand());
+var result = _requestum.Execute<ProcessOrderCommand, OrderResult>(command);
 
 // Queries handle and return results
 var user = await _requestum.HandleAsync<GetUserQuery, UserDto>(new GetUserQuery(1));
@@ -150,7 +159,11 @@ _requestum.Publish(new OrderProcessedEvent(orderId));
 
 ### Commands
 
-Commands represent operations that change system state and don't return values.
+Commands represent operations that change system state. Requestum supports both commands that don't return values and commands that return results.
+
+#### Commands Without Return Values
+
+Traditional commands that only modify state:
 
 ```csharp
 // Synchronous command
@@ -182,6 +195,89 @@ requestum.Execute(new CreateUserCommand { Name = "Alice", Email = "alice@example
 // Or execute asynchronously
 await requestum.ExecuteAsync(new CreateUserCommand { Name = "Bob", Email = "bob@example.com" });
 ```
+
+#### Commands With Return Values
+
+Commands that modify state and return a result using `ICommand<TResponse>`:
+
+```csharp
+// Synchronous command with result
+public record CreateUserCommand : ICommand<int> // Returns user ID
+{
+    public string Name { get; set; } = "";
+    public string Email { get; set; } = "";
+}
+
+public class CreateUserHandler : ICommandHandler<CreateUserCommand, int>
+{
+    private readonly IUserRepository _repository;
+
+    public CreateUserHandler(IUserRepository repository)
+    {
+        _repository = repository;
+    }
+
+    public int Execute(CreateUserCommand command)
+    {
+        var user = new User(command.Name, command.Email);
+        _repository.Create(user);
+        return user.Id; // Return the created user ID
+    }
+}
+
+// Execute synchronously and get result
+var userId = requestum.Execute<CreateUserCommand, int>(
+    new CreateUserCommand { Name = "Alice", Email = "alice@example.com" }
+);
+
+// Asynchronous command with complex result
+public record ProcessOrderCommand : ICommand<OrderResult>
+{
+    public int OrderId { get; set; }
+    public List<int> Items { get; set; } = new();
+}
+
+public record OrderResult
+{
+    public int OrderId { get; set; }
+    public decimal TotalAmount { get; set; }
+    public string Status { get; set; } = "";
+}
+
+public class ProcessOrderHandler : IAsyncCommandHandler<ProcessOrderCommand, OrderResult>
+{
+    private readonly IOrderService _orderService;
+
+    public ProcessOrderHandler(IOrderService orderService)
+    {
+        _orderService = orderService;
+    }
+
+    public async Task<OrderResult> ExecuteAsync(ProcessOrderCommand command, CancellationToken ct = default)
+    {
+        var order = await _orderService.ProcessAsync(command.OrderId, command.Items, ct);
+        
+        return new OrderResult
+        {
+            OrderId = order.Id,
+            TotalAmount = order.TotalAmount,
+            Status = order.Status
+        };
+    }
+}
+
+// Execute asynchronously and get result
+var result = await requestum.ExecuteAsync<ProcessOrderCommand, OrderResult>(
+    new ProcessOrderCommand { OrderId = 123, Items = new List<int> { 1, 2, 3 } }
+);
+Console.WriteLine($"Order {result.OrderId} processed with total: ${result.TotalAmount}");
+```
+
+**When to use commands with return values:**
+- ✅ When you need to return an ID or status after creating/modifying an entity
+- ✅ For operations that both modify state and calculate/return a result
+- ✅ When the returned value is a direct consequence of the command execution
+- ❌ Avoid if you're just querying data without modifications (use `IQuery<TResponse>` instead)
 
 ### Queries
 
@@ -519,10 +615,11 @@ await _requestum.ExecuteAsync(new CreateUserCommand());
 ```csharp
 // Requests
 public interface ICommand : IBaseRequest;
+public interface ICommand<TResponse> : IBaseRequest;
 public interface IQuery<TResponse> : IBaseRequest where TResponse : IResponse;
 public interface IEventMessage : IBaseRequest;
 
-// Handlers
+// Command Handlers
 public interface ICommandHandler<TCommand> where TCommand : ICommand
 {
     void Execute(TCommand command);
@@ -533,6 +630,18 @@ public interface IAsyncCommandHandler<TCommand> where TCommand : ICommand
     Task ExecuteAsync(TCommand command, CancellationToken cancellationToken = default);
 }
 
+// Command Handlers with Result
+public interface ICommandHandler<TCommand, TResponse> where TCommand : ICommand<TResponse>
+{
+    TResponse Execute(TCommand command);
+}
+
+public interface IAsyncCommandHandler<TCommand, TResponse> where TCommand : ICommand<TResponse>
+{
+    Task<TResponse> ExecuteAsync(TCommand command, CancellationToken cancellationToken = default);
+}
+
+// Query Handlers
 public interface IQueryHandler<TQuery, TResponse> 
     where TQuery : IQuery<TResponse>
     where TResponse : IResponse
@@ -578,7 +687,10 @@ public interface IAsyncRequestMiddleware<TRequest, TResponse>
 ## ❓ FAQ
 
 **Q: What's the difference between Command and Query?**  
-A: Commands modify state and don't return values. Queries read data and return typed responses. This follows the CQRS pattern.
+A: Commands modify state and may or may not return values. Queries only read data and always return typed responses without modifying state. This follows the CQRS pattern.
+
+**Q: When should I use `ICommand<TResponse>` vs `IQuery<TResponse>`?**  
+A: Use `ICommand<TResponse>` when you need to modify state AND return a result (e.g., creating a user and returning their ID). Use `IQuery<TResponse>` when you only need to read data without any modifications.
 
 **Q: What's the difference between Command and Event?**  
 A: Commands are actions that tell the system to do something and have exactly one handler. Events are notifications about something that already happened and can have multiple receivers (or none). Commands represent intent, events represent facts.

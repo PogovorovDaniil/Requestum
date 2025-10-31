@@ -42,6 +42,39 @@ public interface IAsyncCommandHandler<TCommand> : IBaseHandler<TCommand>
 }
 
 /// <summary>
+/// Defines a handler for a command that returns a result.
+/// </summary>
+/// <typeparam name="TCommand">The type of command this handler processes.</typeparam>
+/// <typeparam name="TResponse">The type of the command result.</typeparam>
+public interface ICommandHandler<TCommand, TResponse> : IBaseHandler<TCommand>
+    where TCommand : ICommand<TResponse>
+{
+    /// <summary>
+    /// Executes the specified command and returns the result.
+    /// </summary>
+    /// <param name="command">The command to execute.</param>
+    /// <returns>The result of the command execution.</returns>
+    TResponse Execute(TCommand command);
+}
+
+/// <summary>
+/// Defines an asynchronous handler for a command that returns a result.
+/// </summary>
+/// <typeparam name="TCommand">The type of command this handler processes.</typeparam>
+/// <typeparam name="TResponse">The type of the command result.</typeparam>
+public interface IAsyncCommandHandler<TCommand, TResponse> : IBaseHandler<TCommand>
+    where TCommand : ICommand<TResponse>
+{
+    /// <summary>
+    /// Asynchronously executes the specified command and returns the result.
+    /// </summary>
+    /// <param name="command">The command to execute.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The result of the command execution.</returns>
+    Task<TResponse> ExecuteAsync(TCommand command, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
 /// Defines a handler for a query that returns a result.
 /// </summary>
 /// <typeparam name="TQuery">The type of query.</typeparam>

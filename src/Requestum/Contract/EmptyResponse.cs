@@ -4,8 +4,7 @@
 /// Placeholder response for commands (<see cref="ICommand"/>), 
 /// used when a command does not need to return any result.
 /// </summary>
-public class CommandResponse
+public class EmptyResponse
 {
-    public static readonly CommandResponse Instance = new();
-    public override string ToString() => "Yes, it's definitely a command response!";
+    public static readonly EmptyResponse Instance = new();
 }

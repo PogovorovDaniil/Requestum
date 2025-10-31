@@ -8,7 +8,13 @@ public interface IBaseRequest;
 /// <summary>
 /// Represents a command that modifies the system state.
 /// </summary>
-public interface ICommand : IBaseRequest;
+public interface ICommand : ICommand<EmptyResponse>;
+
+/// <summary>
+/// Represents a command that modifies the system state with result.
+/// </summary>
+/// <typeparam name="TResponse">The type of the response returned by the command.</typeparam>
+public interface ICommand<TResponse> : IBaseRequest;
 
 /// <summary>
 /// Represents a query returning a result of the specified type.

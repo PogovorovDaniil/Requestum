@@ -38,6 +38,39 @@ public interface IAsyncRequestMiddleware<TRequest, TResponse> : IBaseMiddleware<
 }
 
 /// <summary>
+/// Marker interface for query middleware. Do not use unless you know what you're doing.
+/// Use <see cref="IQueryMiddleware{TQuery, TResponse}"/> or <see cref="IAsyncQueryMiddleware{TQuery, TResponse}"/> instead.
+/// </summary>
+public interface IQueryMiddleware;
+
+/// <summary>
+/// Defines middleware for synchronous query processing.
+/// </summary>
+public interface IQueryMiddleware<TQuery, TResponse> : IBaseMiddleware<TQuery, TResponse>, IQueryMiddleware;
+
+/// <summary>
+/// Defines middleware for asynchronous query processing.
+/// </summary>
+public interface IAsyncQueryMiddleware<TQuery, TResponse> : IBaseMiddleware<TQuery, TResponse>, IQueryMiddleware;
+
+
+/// <summary>
+/// Marker interface for command middleware. Do not use unless you know what you're doing.
+/// Use <see cref="ICommandMiddleware{TCommand, TResponse}"/> or <see cref="IAsyncCommandMiddleware{TCommand, TResponse}"/> instead.
+/// </summary>
+public interface ICommandMiddleware;
+
+/// <summary>
+/// Defines middleware for synchronous command processing.
+/// </summary>
+public interface ICommandMiddleware<TCommand, TResponse> : IBaseMiddleware<TCommand, TResponse>, ICommandMiddleware;
+
+/// <summary>
+/// Defines middleware for asynchronous command processing.
+/// </summary>
+public interface IAsyncCommandMiddleware<TCommand, TResponse> : IBaseMiddleware<TCommand, TResponse>, ICommandMiddleware;
+
+/// <summary>
 /// Represents a delegate that invokes the next middleware or final handler
 /// in the synchronous request processing pipeline.
 /// </summary>

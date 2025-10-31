@@ -10,17 +10,16 @@ public sealed partial class RequestumCore(IServiceProvider serviceProvider) : IR
     private static ConcurrentDictionary<Type, object> cachedRequests = [];
     public bool RequireEventHandlers { get; internal set; }
 
-
     /// <summary>
     /// Builds the middleware pipeline by chaining registered middleware components.
     /// </summary>
     /// <param name="middlewareDelegate">The initial middleware delegate.</param>
     /// <returns>The configured middleware pipeline delegate.</returns>
-    private IMiddlewareDelegate<TRequest, TResponse> BuildMiddleware<TRequest, TResponse>(IMiddlewareDelegate<TRequest, TResponse> middlewareDelegate)
+    private IMiddlewareDelegate<TRequest, TResponse> BuildMiddleware<TRequest, TResponse>(IMiddlewareDelegate<TRequest, TResponse> middlewareDelegate, RequestType requestType)
     {
         if (serviceProvider is null) return middlewareDelegate;
 
-        var baseMiddlewares = serviceProvider.GetService<IEnumerable<IBaseMiddleware<TRequest, TResponse>>>();
+        var baseMiddlewares = serviceProvider.GetKeyedService<IEnumerable<IBaseMiddleware<TRequest, TResponse>>>(requestType);
         if (baseMiddlewares is null) return middlewareDelegate;
 
         foreach (var baseMiddleware in baseMiddlewares)

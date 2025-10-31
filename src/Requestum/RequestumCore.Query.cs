@@ -13,12 +13,12 @@ public partial class RequestumCore
         return handler switch
         {
             IQueryHandler<TQuery, TResponse> queryHandler =>
-                BuildMiddleware(new QueryMiddlewareDelegate<TQuery, TResponse>(queryHandler))
+                BuildMiddleware(new QueryMiddlewareDelegate<TQuery, TResponse>(queryHandler), RequestType.Query)
                     .Invoke(query)
                     .GetAwaiter()
                     .GetResult()!,
             IAsyncQueryHandler<TQuery, TResponse> asyncQueryHandler =>
-                BuildMiddleware(new QueryMiddlewareAsyncDelegate<TQuery, TResponse>(asyncQueryHandler))
+                BuildMiddleware(new QueryMiddlewareAsyncDelegate<TQuery, TResponse>(asyncQueryHandler), RequestType.Query)
                     .Invoke(query)
                     .GetAwaiter()
                     .GetResult()!,
@@ -33,10 +33,10 @@ public partial class RequestumCore
         return handler switch
         {
             IAsyncQueryHandler<TQuery, TResponse> asyncQueryHandler =>
-                BuildMiddleware(new QueryMiddlewareAsyncDelegate<TQuery, TResponse>(asyncQueryHandler))
+                BuildMiddleware(new QueryMiddlewareAsyncDelegate<TQuery, TResponse>(asyncQueryHandler), RequestType.Query)
                     .Invoke(query),
             IQueryHandler<TQuery, TResponse> queryHandler =>
-                BuildMiddleware(new QueryMiddlewareDelegate<TQuery, TResponse>(queryHandler))
+                BuildMiddleware(new QueryMiddlewareDelegate<TQuery, TResponse>(queryHandler), RequestType.Query)
                     .Invoke(query),
             _ => throw new RequestumException($"No handler registered for query type '{typeof(TQuery).Name}'."),
         };

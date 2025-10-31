@@ -64,26 +64,26 @@ public class RequestumMiddlewareTests
     public void CommandMiddleware_IsCalled()
     {
         // Arrange
-        TestRequestMiddleware<TestCommand, CommandResponse>.Reset();
+        TestRequestMiddleware<TestCommand, EmptyResponse>.Reset();
 
         // Act
         _requestum.Execute(new TestCommand());
 
         // Assert
-        Assert.True(TestRequestMiddleware<TestCommand, CommandResponse>.Called, "Synchronous middleware should be called.");
+        Assert.True(TestRequestMiddleware<TestCommand, EmptyResponse>.Called, "Synchronous middleware should be called.");
     }
 
     [Fact]
     public async Task AsyncCommandMiddleware_IsCalled()
     {
         // Arrange
-        TestAsyncRequestMiddleware<TestAsyncCommand, CommandResponse>.Reset();
+        TestAsyncRequestMiddleware<TestAsyncCommand, EmptyResponse>.Reset();
 
         // Act
         await _requestum.ExecuteAsync(new TestAsyncCommand());
 
         // Assert
-        Assert.True(TestAsyncRequestMiddleware<TestAsyncCommand, CommandResponse>.Called, "Asynchronous middleware should be called.");
+        Assert.True(TestAsyncRequestMiddleware<TestAsyncCommand, EmptyResponse>.Called, "Asynchronous middleware should be called.");
     }
 
     [Fact]

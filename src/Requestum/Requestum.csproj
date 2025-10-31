@@ -8,7 +8,7 @@
 	<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 
 	<PackageId>Requestum</PackageId>
-	<Version>1.1.6</Version>
+	<Version>1.1.7</Version>
 	<Authors>Daniil Pogovorov</Authors>
 
 	<Description>Requestum is a lightweight and explicit CQRS library for .NET, providing a structured approach to handling commands, queries, and middlewares with strong typing and dependency injection support.</Description>

@@ -20,6 +20,8 @@ public static class RequestumServiceCollectionExtentions
         [
             typeof(ICommandHandler<>),
             typeof(IAsyncCommandHandler<>),
+            typeof(ICommandHandler<,>),
+            typeof(IAsyncCommandHandler<,>),
             typeof(IQueryHandler<,>),
             typeof(IAsyncQueryHandler<,>),
             typeof(IEventMessageReceiver<>),
@@ -82,7 +84,24 @@ public static class RequestumServiceCollectionExtentions
     {
         foreach (var middlewareType in GetMiddlewareTypes(assemblies))
         {
-            services.TryAddEnumerable(new ServiceDescriptor(typeof(IBaseMiddleware<,>), middlewareType, serviceLifetime));
+            RegisterMiddleware(services, serviceLifetime, middlewareType);
+        }
+    }
+
+    private static void RegisterMiddleware(IServiceCollection services, ServiceLifetime serviceLifetime, Type middlewareType)
+    {
+        if (typeof(ICommandMiddleware).IsAssignableFrom(middlewareType))
+        {
+            services.TryAddEnumerable(new ServiceDescriptor(typeof(IBaseMiddleware<,>), RequestType.Command, middlewareType, serviceLifetime));
+        }
+        else if (typeof(IQueryMiddleware).IsAssignableFrom(middlewareType))
+        {
+            services.TryAddEnumerable(new ServiceDescriptor(typeof(IBaseMiddleware<,>), RequestType.Query, middlewareType, serviceLifetime));
+        }
+        else
+        {
+            services.TryAddEnumerable(new ServiceDescriptor(typeof(IBaseMiddleware<,>), RequestType.Command, middlewareType, serviceLifetime));
+            services.TryAddEnumerable(new ServiceDescriptor(typeof(IBaseMiddleware<,>), RequestType.Query, middlewareType, serviceLifetime));
         }
     }
 
@@ -126,13 +145,13 @@ public static class RequestumServiceCollectionExtentions
             if (service.Lifetime == ServiceLifetime.Scoped && cfg.Lifetime != ServiceLifetime.Scoped)
                 throw new RequestumException($"Cannot register a scoped middleware '{service.MiddlewareType.Name}' when the global lifetime is not scoped.");
 
-            services.TryAddEnumerable(new ServiceDescriptor(typeof(IBaseMiddleware<,>), service.MiddlewareType, service.Lifetime));
+            RegisterMiddleware(services, service.Lifetime, service.MiddlewareType);
         }
 
         RegisterHandlers(services, cfg.Lifetime, cfg.HandlerAssemblies);
         RegisterMiddlewares(services, cfg.Lifetime, cfg.MiddlewareAssemblies);
 
-        services.Add(new ServiceDescriptor(typeof(IRequestum), serviceProvider =>
+        services.TryAdd(new ServiceDescriptor(typeof(IRequestum), serviceProvider =>
         {
             return new RequestumCore(serviceProvider)
             {
