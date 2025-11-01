@@ -616,7 +616,7 @@ await _requestum.ExecuteAsync(new CreateUserCommand());
 // Requests
 public interface ICommand : IBaseRequest;
 public interface ICommand<TResponse> : IBaseRequest;
-public interface IQuery<TResponse> : IBaseRequest where TResponse : IResponse;
+public interface IQuery<TResponse> : IBaseRequest;
 public interface IEventMessage : IBaseRequest;
 
 // Command Handlers
