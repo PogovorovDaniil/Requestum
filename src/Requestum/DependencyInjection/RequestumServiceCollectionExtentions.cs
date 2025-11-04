@@ -28,6 +28,16 @@ public static class RequestumServiceCollectionExtentions
             typeof(IAsyncEventMessageReceiver<>),
         ];
 
+    private static readonly Type[] middlewareInterfaceTypes =
+        [
+            typeof(IRequestMiddleware<,>),
+            typeof(IAsyncRequestMiddleware<,>),
+            typeof(ICommandMiddleware<,>),
+            typeof(IAsyncCommandMiddleware<,>),
+            typeof(IQueryMiddleware<,>),
+            typeof(IAsyncQueryMiddleware<,>),
+        ];
+
     private static Type[] GetHandlerTypes(IEnumerable<Assembly> assemblies) => assemblies
         .SelectMany(a => a.GetTypes())
         .Where(t => t.IsClass && !t.IsAbstract)
@@ -37,7 +47,7 @@ public static class RequestumServiceCollectionExtentions
     private static Type[] GetMiddlewareTypes(IEnumerable<Assembly> assemblies) => assemblies
         .SelectMany(a => a.GetTypes())
         .Where(t => t.IsClass && !t.IsAbstract)
-        .Where(t => t.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IBaseMiddleware<,>)))
+        .Where(t => t.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IMiddleware<,>)))
         .ToArray();
 
     private static Type[] GetHandlerRequestTypes(Type handlerType) => handlerType
@@ -46,6 +56,9 @@ public static class RequestumServiceCollectionExtentions
         .Where(i => handlerInterfaceTypes.Contains(i.GetGenericTypeDefinition()))
         .Select(i => i.GenericTypeArguments[0])
         .ToArray();
+
+    private static string? GetHandlerTag(Type handlerType) => handlerType
+        .GetCustomAttribute<HandlerTagAttribute>()?.Tag;
 
     /// <summary>
     /// Registers all handler types found in the specified assemblies with the dependency injection container.
@@ -61,13 +74,18 @@ public static class RequestumServiceCollectionExtentions
     {
         foreach (var handlerType in GetHandlerTypes(assemblies))
         {
-            foreach (var requestType in GetHandlerRequestTypes(handlerType))
-            {
-                var descriptor = new ServiceDescriptor(typeof(IBaseHandler<>).MakeGenericType(requestType), handlerType, serviceLifetime);
+            RegisterHandler(services, serviceLifetime, handlerType);
+        }
+    }
 
-                if (typeof(IEventMessage).IsAssignableFrom(requestType)) services.TryAddEnumerable(descriptor);
-                else services.TryAdd(descriptor);
-            }
+    private static void RegisterHandler(IServiceCollection services, ServiceLifetime serviceLifetime, Type handlerType)
+    {
+        foreach (var requestType in GetHandlerRequestTypes(handlerType))
+        {
+            var tag = GetHandlerTag(handlerType);
+
+            if (tag is null) services.TryAddEnumerable(new ServiceDescriptor(typeof(IBaseHandler<>).MakeGenericType(requestType), handlerType, serviceLifetime));
+            else services.TryAddEnumerable(new ServiceDescriptor(typeof(IBaseHandler<>).MakeGenericType(requestType), tag, handlerType, serviceLifetime));
         }
     }
 
@@ -90,18 +108,20 @@ public static class RequestumServiceCollectionExtentions
 
     private static void RegisterMiddleware(IServiceCollection services, ServiceLifetime serviceLifetime, Type middlewareType)
     {
-        if (typeof(ICommandMiddleware).IsAssignableFrom(middlewareType))
+        var tag = GetHandlerTag(middlewareType);
+        if (tag is null)
         {
-            services.TryAddEnumerable(new ServiceDescriptor(typeof(IBaseMiddleware<,>), RequestType.Command, middlewareType, serviceLifetime));
-        }
-        else if (typeof(IQueryMiddleware).IsAssignableFrom(middlewareType))
-        {
-            services.TryAddEnumerable(new ServiceDescriptor(typeof(IBaseMiddleware<,>), RequestType.Query, middlewareType, serviceLifetime));
+            if (typeof(IBaseCommandMiddleware).IsAssignableFrom(middlewareType))
+                services.TryAddEnumerable(new ServiceDescriptor(typeof(IBaseCommandMiddleware<,>), middlewareType, serviceLifetime));
+            if (typeof(IBaseQueryMiddleware).IsAssignableFrom(middlewareType))
+                services.TryAddEnumerable(new ServiceDescriptor(typeof(IBaseQueryMiddleware<,>), middlewareType, serviceLifetime));
         }
         else
         {
-            services.TryAddEnumerable(new ServiceDescriptor(typeof(IBaseMiddleware<,>), RequestType.Command, middlewareType, serviceLifetime));
-            services.TryAddEnumerable(new ServiceDescriptor(typeof(IBaseMiddleware<,>), RequestType.Query, middlewareType, serviceLifetime));
+            if (typeof(IBaseCommandMiddleware).IsAssignableFrom(middlewareType))
+                services.TryAddEnumerable(new ServiceDescriptor(typeof(IBaseCommandMiddleware<,>), tag, middlewareType, serviceLifetime));
+            if (typeof(IBaseQueryMiddleware).IsAssignableFrom(middlewareType))
+                services.TryAddEnumerable(new ServiceDescriptor(typeof(IBaseQueryMiddleware<,>), tag, middlewareType, serviceLifetime));
         }
     }
 
@@ -134,10 +154,7 @@ public static class RequestumServiceCollectionExtentions
             if (service.Lifetime == ServiceLifetime.Scoped && cfg.Lifetime != ServiceLifetime.Scoped)
                 throw new RequestumException($"Cannot register a scoped handler '{service.HandlerType.Name}' when the global lifetime is not scoped.");
 
-            foreach (var requestType in GetHandlerRequestTypes(service.HandlerType))
-            {
-                services.TryAdd(new ServiceDescriptor(typeof(IBaseHandler<>).MakeGenericType(requestType), service.HandlerType, service.Lifetime));
-            }
+            RegisterHandler(services, service.Lifetime, service.HandlerType);
         }
 
         foreach (var service in cfg.CustomMiddlewares)

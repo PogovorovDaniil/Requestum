@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Requestum.Contract;
+﻿using Requestum.Contract;
 using Requestum.Middleware;
 
 namespace Requestum;
@@ -9,16 +8,16 @@ public partial class RequestumCore
     public void Execute<TCommand>(TCommand command)
         where TCommand : ICommand
     {
-        var handler = serviceProvider.GetService(typeof(IBaseHandler<TCommand>));
+        var handler = GetHandler(command);
         switch (handler)
         {
             case IAsyncCommandHandler<TCommand> asyncCommandHandler:
-                BuildMiddleware(new CommandMiddlewareAsyncDelegate<TCommand>(asyncCommandHandler), RequestType.Command)
+                BuildCommandMiddleware(new CommandMiddlewareAsyncDelegate<TCommand>(asyncCommandHandler), command)
                     .Invoke(command)
                     .Wait();
                 return;
             case ICommandHandler<TCommand> commandHandler:
-                BuildMiddleware(new CommandMiddlewareDelegate<TCommand>(commandHandler), RequestType.Command)
+                BuildCommandMiddleware(new CommandMiddlewareDelegate<TCommand>(commandHandler), command)
                     .Invoke(command)
                     .Wait();
                 return;
@@ -30,14 +29,14 @@ public partial class RequestumCore
     public Task ExecuteAsync<TCommand>(TCommand command, CancellationToken cancellationToken = default)
         where TCommand : ICommand
     {
-        var handler = serviceProvider.GetService(typeof(IBaseHandler<TCommand>));
+        var handler = GetHandler(command);
         switch (handler)
         {
             case IAsyncCommandHandler<TCommand> asyncCommandHandler:
-                return BuildMiddleware(new CommandMiddlewareAsyncDelegate<TCommand>(asyncCommandHandler), RequestType.Command)
+                return BuildCommandMiddleware(new CommandMiddlewareAsyncDelegate<TCommand>(asyncCommandHandler), command)
                     .Invoke(command, cancellationToken);
             case ICommandHandler<TCommand> commandHandler:
-                return BuildMiddleware(new CommandMiddlewareDelegate<TCommand>(commandHandler), RequestType.Command)
+                return BuildCommandMiddleware(new CommandMiddlewareDelegate<TCommand>(commandHandler), command)
                     .Invoke(command, cancellationToken);
             default:
                 throw new RequestumException($"No handler registered for command type '{typeof(TCommand).Name}'.");
@@ -47,16 +46,16 @@ public partial class RequestumCore
     public TResponse Execute<TCommand, TResponse>(TCommand command)
         where TCommand : ICommand<TResponse>
     {
-        var handler = serviceProvider.GetService<IBaseHandler<TCommand>>();
+        var handler = GetHandler(command);
         return handler switch
         {
             ICommandHandler<TCommand, TResponse> commandHandler =>
-                BuildMiddleware(new CommandMiddlewareDelegate<TCommand, TResponse>(commandHandler), RequestType.Command)
+                BuildCommandMiddleware(new CommandMiddlewareDelegate<TCommand, TResponse>(commandHandler), command)
                     .Invoke(command)
                     .GetAwaiter()
                     .GetResult()!,
             IAsyncCommandHandler<TCommand, TResponse> asyncCommandHandler =>
-                BuildMiddleware(new CommandMiddlewareAsyncDelegate<TCommand, TResponse>(asyncCommandHandler), RequestType.Command)
+                BuildCommandMiddleware(new CommandMiddlewareAsyncDelegate<TCommand, TResponse>(asyncCommandHandler), command)
                     .Invoke(command)
                     .GetAwaiter()
                     .GetResult()!,
@@ -67,14 +66,14 @@ public partial class RequestumCore
     public Task<TResponse> ExecuteAsync<TCommand, TResponse>(TCommand command)
         where TCommand : ICommand<TResponse>
     {
-        var handler = serviceProvider.GetService<IBaseHandler<TCommand>>();
+        var handler = GetHandler(command);
         return handler switch
         {
             ICommandHandler<TCommand, TResponse> commandHandler =>
-                BuildMiddleware(new CommandMiddlewareDelegate<TCommand, TResponse>(commandHandler), RequestType.Command)
+                BuildCommandMiddleware(new CommandMiddlewareDelegate<TCommand, TResponse>(commandHandler), command)
                     .Invoke(command),
             IAsyncCommandHandler<TCommand, TResponse> asyncCommandHandler =>
-                BuildMiddleware(new CommandMiddlewareAsyncDelegate<TCommand, TResponse>(asyncCommandHandler), RequestType.Command)
+                BuildCommandMiddleware(new CommandMiddlewareAsyncDelegate<TCommand, TResponse>(asyncCommandHandler), command)
                     .Invoke(command),
             _ => throw new RequestumException($"No handler registered for command type '{typeof(TCommand).Name}'."),
         };

@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Requestum.Contract;
+﻿using Requestum.Contract;
 
 namespace Requestum;
 
@@ -8,7 +7,7 @@ public partial class RequestumCore
     public void Publish<TMessage>(TMessage message)
         where TMessage : IEventMessage
     {
-        var handlers = serviceProvider.GetService<IEnumerable<IBaseHandler<TMessage>>>();
+        var handlers = GetHandlers(message);
         if (handlers is null || !handlers.Any())
         {
             if (RequireEventHandlers)
@@ -45,7 +44,7 @@ public partial class RequestumCore
     public async Task PublishAsync<TMessage>(TMessage message, CancellationToken cancellationToken = default)
         where TMessage : IEventMessage
     {
-        var handlers = serviceProvider.GetService<IEnumerable<IBaseHandler<TMessage>>>(); 
+        var handlers = GetHandlers(message);
         if (handlers is null || !handlers.Any())
         {
             if (RequireEventHandlers)

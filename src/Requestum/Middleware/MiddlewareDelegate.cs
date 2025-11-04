@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 namespace Requestum.Middleware;
 
 internal readonly struct MiddlewareDelegate<TRequest, TResponse>(
-    IRequestMiddleware<TRequest, TResponse> requestMiddleware,
+    IBaseMiddleware<TRequest, TResponse> requestMiddleware,
     IMiddlewareDelegate<TRequest, TResponse> next) : IMiddlewareDelegate<TRequest, TResponse>
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -15,7 +15,7 @@ internal readonly struct MiddlewareDelegate<TRequest, TResponse>(
 }
 
 internal readonly struct MiddlewareAsyncDelegate<TRequest, TResponse>(
-    IAsyncRequestMiddleware<TRequest, TResponse> asyncRequestMiddleware,
+    IAsyncBaseMiddleware<TRequest, TResponse> asyncRequestMiddleware,
     IMiddlewareDelegate<TRequest, TResponse> next) : IMiddlewareDelegate<TRequest, TResponse>
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

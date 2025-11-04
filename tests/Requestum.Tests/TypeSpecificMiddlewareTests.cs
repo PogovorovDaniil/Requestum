@@ -46,8 +46,7 @@ public class FormatMessageCommandWithResultHandler : IAsyncCommandHandler<Format
 /// <summary>
 /// Middleware specifically for commands with result.
 /// </summary>
-public class TestCommandMiddleware<TCommand, TResponse> : IRequestMiddleware<TCommand, TResponse>
-    where TCommand : ICommand<TResponse>
+public class TestCommandMiddleware<TCommand, TResponse> : ICommandMiddleware<TCommand, TResponse>
 {
     public static bool Called { get; private set; }
     public static Type? LastCommandType { get; private set; }
@@ -69,8 +68,7 @@ public class TestCommandMiddleware<TCommand, TResponse> : IRequestMiddleware<TCo
 /// <summary>
 /// Middleware specifically for queries.
 /// </summary>
-public class TestQueryMiddleware<TQuery, TResponse> : IRequestMiddleware<TQuery, TResponse>
-    where TQuery : IQuery<TResponse>
+public class TestQueryMiddleware<TQuery, TResponse> : IQueryMiddleware<TQuery, TResponse>
 {
     public static bool Called { get; private set; }
     public static Type? LastQueryType { get; private set; }
@@ -92,8 +90,7 @@ public class TestQueryMiddleware<TQuery, TResponse> : IRequestMiddleware<TQuery,
 /// <summary>
 /// Async middleware specifically for commands with result.
 /// </summary>
-public class TestAsyncCommandMiddleware<TCommand, TResponse> : IAsyncRequestMiddleware<TCommand, TResponse>
-    where TCommand : ICommand<TResponse>
+public class TestAsyncCommandMiddleware<TCommand, TResponse> : IAsyncCommandMiddleware<TCommand, TResponse>
 {
     public static bool Called { get; private set; }
     public static Type? LastCommandType { get; private set; }
@@ -118,8 +115,7 @@ public class TestAsyncCommandMiddleware<TCommand, TResponse> : IAsyncRequestMidd
 /// <summary>
 /// Async middleware specifically for queries.
 /// </summary>
-public class TestAsyncQueryMiddleware<TQuery, TResponse> : IAsyncRequestMiddleware<TQuery, TResponse>
-    where TQuery : IQuery<TResponse>
+public class TestAsyncQueryMiddleware<TQuery, TResponse> : IAsyncQueryMiddleware<TQuery, TResponse>
 {
     public static bool Called { get; private set; }
     public static Type? LastQueryType { get; private set; }
