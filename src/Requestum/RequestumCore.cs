@@ -2,22 +2,25 @@
 using Requestum.Contract;
 using Requestum.Middleware;
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 
 namespace Requestum;
 
 public sealed partial class RequestumCore(IServiceProvider serviceProvider) : IRequestum
 {
     private static ConcurrentDictionary<Type, object> cachedRequests = [];
+    public string[] GlobalTags { get; init; } = [];
     public bool RequireEventHandlers { get; internal set; }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private IMiddlewareDelegate<TRequest, TResponse> BuildCommandMiddleware<TRequest, TResponse>(IMiddlewareDelegate<TRequest, TResponse> middlewareDelegate, TRequest request)
     {
         var baseMiddlewares = serviceProvider.GetServices<IBaseCommandMiddleware<TRequest, TResponse>>();
 
         string[] tags = request is ITaggedRequest taggedRequest ? taggedRequest.Tags : [];
-        if (tags.Length > 0)
+        if (tags.Length + GlobalTags.Length > 0)
         {
-            foreach(var tag in tags)
+            foreach(var tag in GlobalTags.Concat(tags))
             {
                 baseMiddlewares = baseMiddlewares.Concat(serviceProvider.GetKeyedService<IEnumerable<IBaseCommandMiddleware<TRequest, TResponse>>>(tag) ?? []);
             }
@@ -36,14 +39,15 @@ public sealed partial class RequestumCore(IServiceProvider serviceProvider) : IR
         return middlewareDelegate;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private IMiddlewareDelegate<TRequest, TResponse> BuildQueryMiddleware<TRequest, TResponse>(IMiddlewareDelegate<TRequest, TResponse> middlewareDelegate, TRequest request)
     {
         var baseMiddlewares = serviceProvider.GetServices<IBaseQueryMiddleware<TRequest, TResponse>>();
 
         string[] tags = request is ITaggedRequest taggedRequest ? taggedRequest.Tags : [];
-        if (tags.Length > 0)
+        if (tags.Length + GlobalTags.Length > 0)
         {
-            foreach (var tag in tags)
+            foreach (var tag in GlobalTags.Concat(tags))
             {
                 baseMiddlewares = baseMiddlewares.Concat(serviceProvider.GetKeyedService<IEnumerable<IBaseQueryMiddleware<TRequest, TResponse>>>(tag) ?? []);
             }
@@ -61,12 +65,24 @@ public sealed partial class RequestumCore(IServiceProvider serviceProvider) : IR
         return middlewareDelegate;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private IBaseHandler<TRequest>? GetHandler<TRequest>(TRequest request)
         where TRequest : IBaseRequest
     {
         if (request is ITaggedRequest taggedRequest)
         {
-            foreach (var tag in taggedRequest.Tags)
+            IEnumerable<string> tags = taggedRequest.Tags;
+            if (GlobalTags.Length > 0) tags = GlobalTags.Concat(tags);
+
+            foreach (var tag in tags)
+            {
+                var handler = serviceProvider.GetKeyedService<IBaseHandler<TRequest>>(tag);
+                if (handler is not null) return handler;
+            }
+        }
+        else if(GlobalTags.Length > 0)
+        {
+            foreach (var tag in GlobalTags)
             {
                 var handler = serviceProvider.GetKeyedService<IBaseHandler<TRequest>>(tag);
                 if (handler is not null) return handler;
@@ -76,19 +92,15 @@ public sealed partial class RequestumCore(IServiceProvider serviceProvider) : IR
         return serviceProvider.GetService<IBaseHandler<TRequest>>();
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private IEnumerable<IBaseHandler<TRequest>>? GetHandlers<TRequest>(TRequest request)
         where TRequest : IBaseRequest
     {
-        if (request is ITaggedRequest taggedRequest)
+        IEnumerable<IBaseHandler<TRequest>> handlers = serviceProvider.GetServices<IBaseHandler<TRequest>>();
+        foreach (var tag in GlobalTags.Concat(request is ITaggedRequest taggedRequest ? taggedRequest.Tags : []))
         {
-            IEnumerable<IBaseHandler<TRequest>> handlers = [];
-            foreach (var tag in taggedRequest.Tags)
-            {
-                handlers = handlers.Concat(serviceProvider.GetKeyedServices<IBaseHandler<TRequest>>(tag));
-            }
-            return handlers;
+            handlers = handlers.Concat(serviceProvider.GetKeyedServices<IBaseHandler<TRequest>>(tag));
         }
-
-        return serviceProvider.GetServices<IBaseHandler<TRequest>>();
+        return handlers;
     }
 }

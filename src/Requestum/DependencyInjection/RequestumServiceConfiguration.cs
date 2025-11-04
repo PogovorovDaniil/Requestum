@@ -28,6 +28,16 @@ public sealed class RequestumServiceConfiguration
     /// </value>
     public bool RequireEventHandlers { get; set; } = true;
 
+    /// <summary>
+    /// Gets or sets the global tags that will be applied to all requests processed by Requestum.
+    /// These tags can be used for cross-cutting concerns such as logging, monitoring, or filtering.
+    /// Default value is an empty array.
+    /// </summary>
+    /// <value>
+    /// An array of string tags to be applied globally to all requests.
+    /// </value>
+    public string[] GlobalTags { get; set; } = [];
+
     internal List<Assembly> HandlerAssemblies { get; set; } = [];
     internal List<Assembly> MiddlewareAssemblies { get; set; } = [];
     internal List<Assembly> EventMessageAssemblies { get; set; } = [];

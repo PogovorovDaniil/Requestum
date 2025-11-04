@@ -14,6 +14,70 @@ public record TestAsyncQuery(string Query) : IRequest<TestResponse>, IQuery<Test
 public record TestResponse(string Result);
 #endregion
 
+#region Tagged Commands and Queries
+
+/// <summary>
+/// Tagged command for benchmark testing.
+/// </summary>
+public class TaggedBenchmarkCommand : ICommand, ITaggedRequest
+{
+    public string[] Tags { get; }
+    public string Message { get; }
+    
+    public TaggedBenchmarkCommand(string tag, string message)
+    {
+        Tags = [tag];
+        Message = message;
+    }
+}
+
+/// <summary>
+/// Tagged async command for benchmark testing.
+/// </summary>
+public class TaggedAsyncBenchmarkCommand : ICommand, ITaggedRequest
+{
+    public string[] Tags { get; }
+    public string Message { get; }
+    
+    public TaggedAsyncBenchmarkCommand(string tag, string message)
+    {
+        Tags = [tag];
+        Message = message;
+    }
+}
+
+/// <summary>
+/// Tagged query for benchmark testing.
+/// </summary>
+public class TaggedBenchmarkQuery : IQuery<TestResponse>, ITaggedRequest
+{
+    public string[] Tags { get; }
+    public string Query { get; }
+    
+    public TaggedBenchmarkQuery(string tag, string query)
+    {
+        Tags = [tag];
+        Query = query;
+    }
+}
+
+/// <summary>
+/// Tagged async query for benchmark testing.
+/// </summary>
+public class TaggedAsyncBenchmarkQuery : IQuery<TestResponse>, ITaggedRequest
+{
+    public string[] Tags { get; }
+    public string Query { get; }
+    
+    public TaggedAsyncBenchmarkQuery(string tag, string query)
+    {
+        Tags = [tag];
+        Query = query;
+    }
+}
+
+#endregion
+
 #region Events
 // Requestum Event Messages
 public record TestEventMessage(string Message) : IEventMessage;
@@ -249,6 +313,38 @@ public class TestAsyncRequestMiddleware<TRequest, TResponse> : IAsyncRequestMidd
     }
 }
 
+#region Tagged Middleware
+
+[MiddlewareTag("admin")]
+public class BenchmarkAdminTaggedMiddleware<TRequest, TResponse> : IAsyncRequestMiddleware<TRequest, TResponse>
+    where TRequest : notnull
+{
+    public async Task<TResponse> InvokeAsync(
+        TRequest request,
+        AsyncRequestNextDelegate<TRequest, TResponse> next,
+        CancellationToken cancellationToken = default)
+    {
+        _ = request.ToString();
+        return await next.InvokeAsync(request);
+    }
+}
+
+[MiddlewareTag("user")]
+public class BenchmarkUserTaggedMiddleware<TRequest, TResponse> : IAsyncRequestMiddleware<TRequest, TResponse>
+    where TRequest : notnull
+{
+    public async Task<TResponse> InvokeAsync(
+        TRequest request,
+        AsyncRequestNextDelegate<TRequest, TResponse> next,
+        CancellationToken cancellationToken = default)
+    {
+        _ = request.ToString();
+        return await next.InvokeAsync(request);
+    }
+}
+
+#endregion
+
 public class TestMediatRPipelineBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : notnull
 {
@@ -261,4 +357,125 @@ public class TestMediatRPipelineBehavior<TRequest, TResponse> : IPipelineBehavio
         return await next();
     }
 }
+#endregion
+
+#region Tagged Handlers
+
+[HandlerTag("admin")]
+public class AdminTaggedBenchmarkCommandHandler : ICommandHandler<TaggedBenchmarkCommand>
+{
+    public void Execute(TaggedBenchmarkCommand command)
+    {
+        _ = command.Message.Length;
+    }
+}
+
+[HandlerTag("user")]
+public class UserTaggedBenchmarkCommandHandler : ICommandHandler<TaggedBenchmarkCommand>
+{
+    public void Execute(TaggedBenchmarkCommand command)
+    {
+        _ = command.Message.Length;
+    }
+}
+
+// Untagged handler for TaggedBenchmarkCommand
+public class UntaggedBenchmarkCommandHandler : ICommandHandler<TaggedBenchmarkCommand>
+{
+    public void Execute(TaggedBenchmarkCommand command)
+    {
+        _ = command.Message.Length;
+    }
+}
+
+[HandlerTag("admin")]
+public class AdminTaggedAsyncBenchmarkCommandHandler : IAsyncCommandHandler<TaggedAsyncBenchmarkCommand>
+{
+    public async Task ExecuteAsync(TaggedAsyncBenchmarkCommand command, CancellationToken cancellationToken = default)
+    {
+        _ = command.Message.Length;
+        await Task.CompletedTask;
+    }
+}
+
+[HandlerTag("user")]
+public class UserTaggedAsyncBenchmarkCommandHandler : IAsyncCommandHandler<TaggedAsyncBenchmarkCommand>
+{
+    public async Task ExecuteAsync(TaggedAsyncBenchmarkCommand command, CancellationToken cancellationToken = default)
+    {
+        _ = command.Message.Length;
+        await Task.CompletedTask;
+    }
+}
+
+// Untagged handler for TaggedAsyncBenchmarkCommand
+public class UntaggedAsyncBenchmarkCommandHandler : IAsyncCommandHandler<TaggedAsyncBenchmarkCommand>
+{
+    public async Task ExecuteAsync(TaggedAsyncBenchmarkCommand command, CancellationToken cancellationToken = default)
+    {
+        _ = command.Message.Length;
+        await Task.CompletedTask;
+    }
+}
+
+[HandlerTag("admin")]
+public class AdminTaggedBenchmarkQueryHandler : IQueryHandler<TaggedBenchmarkQuery, TestResponse>
+{
+    public TestResponse Handle(TaggedBenchmarkQuery query)
+    {
+        _ = query.Query.Length;
+        return new TestResponse("Success");
+    }
+}
+
+[HandlerTag("user")]
+public class UserTaggedBenchmarkQueryHandler : IQueryHandler<TaggedBenchmarkQuery, TestResponse>
+{
+    public TestResponse Handle(TaggedBenchmarkQuery query)
+    {
+        _ = query.Query.Length;
+        return new TestResponse("Success");
+    }
+}
+
+// Untagged handler for TaggedBenchmarkQuery
+public class UntaggedBenchmarkQueryHandler : IQueryHandler<TaggedBenchmarkQuery, TestResponse>
+{
+    public TestResponse Handle(TaggedBenchmarkQuery query)
+    {
+        _ = query.Query.Length;
+        return new TestResponse("Success");
+    }
+}
+
+[HandlerTag("admin")]
+public class AdminTaggedAsyncBenchmarkQueryHandler : IAsyncQueryHandler<TaggedAsyncBenchmarkQuery, TestResponse>
+{
+    public async Task<TestResponse> HandleAsync(TaggedAsyncBenchmarkQuery query, CancellationToken cancellationToken = default)
+    {
+        _ = query.Query.Length;
+        return await Task.FromResult(new TestResponse("Success"));
+    }
+}
+
+[HandlerTag("user")]
+public class UserTaggedAsyncBenchmarkQueryHandler : IAsyncQueryHandler<TaggedAsyncBenchmarkQuery, TestResponse>
+{
+    public async Task<TestResponse> HandleAsync(TaggedAsyncBenchmarkQuery query, CancellationToken cancellationToken = default)
+    {
+        _ = query.Query.Length;
+        return await Task.FromResult(new TestResponse("Success"));
+    }
+}
+
+// Untagged handler for TaggedAsyncBenchmarkQuery
+public class UntaggedAsyncBenchmarkQueryHandler : IAsyncQueryHandler<TaggedAsyncBenchmarkQuery, TestResponse>
+{
+    public async Task<TestResponse> HandleAsync(TaggedAsyncBenchmarkQuery query, CancellationToken cancellationToken = default)
+    {
+        _ = query.Query.Length;
+        return await Task.FromResult(new TestResponse("Success"));
+    }
+}
+
 #endregion

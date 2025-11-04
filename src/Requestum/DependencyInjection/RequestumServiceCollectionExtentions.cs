@@ -177,7 +177,8 @@ public static class RequestumServiceCollectionExtentions
         {
             return new RequestumCore(serviceProvider)
             {
-                RequireEventHandlers = cfg.RequireEventHandlers
+                RequireEventHandlers = cfg.RequireEventHandlers,
+                GlobalTags = cfg.GlobalTags,
             };
         }, cfg.Lifetime));
 
