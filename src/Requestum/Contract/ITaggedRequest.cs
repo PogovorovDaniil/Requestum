@@ -30,5 +30,5 @@ public interface ITaggedRequest
     /// For middlewares: Includes all middlewares with this tag in addition to untagged middlewares.
     /// </para>
     /// </summary>
-    string Tag { get; }
+    string[] Tags { get; }
 }

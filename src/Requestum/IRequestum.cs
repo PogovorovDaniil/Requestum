@@ -42,6 +42,45 @@ public interface IRequestum
     Task ExecuteAsync<TCommand>(CancellationToken cancellationToken = default)
         where TCommand : ICommand, new();
 
+    /// <summary>
+    /// Executes a command with result synchronously and returns the response.
+    /// </summary>
+    /// <typeparam name="TCommand">The command type implementing <see cref="ICommand{TResponse}"/>.</typeparam>
+    /// <typeparam name="TResponse">The response type.</typeparam>
+    /// <param name="command">The command to execute.</param>
+    /// <returns>The command response.</returns>
+    TResponse Execute<TCommand, TResponse>(TCommand command)
+        where TCommand : ICommand<TResponse>;
+
+    /// <summary>
+    /// Executes a command with result asynchronously and returns the response.
+    /// </summary>
+    /// <typeparam name="TCommand">The command type implementing <see cref="ICommand{TResponse}"/>.</typeparam>
+    /// <typeparam name="TResponse">The response type.</typeparam>
+    /// <param name="command">The command to execute.</param>
+    /// <returns>The command response.</returns>
+    Task<TResponse> ExecuteAsync<TCommand, TResponse>(TCommand command)
+        where TCommand : ICommand<TResponse>;
+
+    /// <summary>
+    /// Executes a command with result synchronously by creating a new instance of the command type and returns the response.
+    /// </summary>
+    /// <typeparam name="TCommand">The command type implementing <see cref="ICommand{TResponse}"/> with a parameterless constructor.</typeparam>
+    /// <typeparam name="TResponse">The response type.</typeparam>
+    /// <returns>The command response.</returns>
+    void Execute<TCommand, TResponse>()
+        where TCommand : ICommand<TResponse>, new();
+
+    /// <summary>
+    /// Executes a command with result asynchronously by creating a new instance of the command type and returns the response.
+    /// </summary>
+    /// <typeparam name="TCommand">The command type implementing <see cref="ICommand{TResponse}"/> with a parameterless constructor.</typeparam>
+    /// <typeparam name="TResponse">The response type.</typeparam>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The command response.</returns>
+    Task ExecuteAsync<TCommand, TResponse>(CancellationToken cancellationToken = default)
+        where TCommand : ICommand<TResponse>, new();
+
     #endregion
 
     #region Query

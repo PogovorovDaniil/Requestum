@@ -7,20 +7,31 @@ namespace Requestum.Tests;
 
 public class TaggedTestCommand : ICommand, ITaggedRequest
 {
-    public string Tag { get; }
-    public TaggedTestCommand(string tag) => Tag = tag;
+    public string[] Tags { get; }
+    public TaggedTestCommand(string tag) => Tags = [tag];
 }
 
 public class TaggedTestQuery : IQuery<TestResponse>, ITaggedRequest
 {
-    public string Tag { get; }
-    public TaggedTestQuery(string tag) => Tag = tag;
+    public string[] Tags { get; }
+    public TaggedTestQuery(string tag) => Tags = [tag];
 }
 
 public class TaggedEventMessage : IEventMessage, ITaggedRequest
 {
-    public string Tag { get; }
-    public TaggedEventMessage(string tag) => Tag = tag;
+    public string[] Tags { get; }
+    public TaggedEventMessage(string tag) => Tags = [tag];
+}
+
+public class TaggedTestCommandWithResult : ICommand<int>, ITaggedRequest
+{
+    public string[] Tags { get; }
+    public int Value { get; }
+    public TaggedTestCommandWithResult(string tag, int value)
+    {
+        Tags = [tag];
+        Value = value;
+    }
 }
 
 #endregion
@@ -83,6 +94,50 @@ public class UserTaggedEventReceiver : IEventMessageReceiver<TaggedEventMessage>
     public static void Reset() => Count = 0;
 }
 
+public class TaggedTestCommandWithResultHandler : ICommandHandler<TaggedTestCommandWithResult, int>
+{
+    public int Execute(TaggedTestCommandWithResult command) => command.Value * 2;
+}
+
+#endregion
+
+#region Middlewares with Tags
+
+[MiddlewareTag("admin")]
+public class AdminTaggedMiddleware<TRequest, TResponse> : IRequestMiddleware<TRequest, TResponse>
+{
+    public static bool Called { get; private set; }
+    public TResponse Invoke(TRequest request, RequestNextDelegate<TRequest, TResponse> next)
+    {
+        Called = true;
+        return next.Invoke(request);
+    }
+    public static void Reset() => Called = false;
+}
+
+[MiddlewareTag("user")]
+public class UserTaggedMiddleware<TRequest, TResponse> : IRequestMiddleware<TRequest, TResponse>
+{
+    public static bool Called { get; private set; }
+    public TResponse Invoke(TRequest request, RequestNextDelegate<TRequest, TResponse> next)
+    {
+        Called = true;
+        return next.Invoke(request);
+    }
+    public static void Reset() => Called = false;
+}
+
+public class UntaggedMiddleware<TRequest, TResponse> : IRequestMiddleware<TRequest, TResponse>
+{
+    public static bool Called { get; private set; }
+    public TResponse Invoke(TRequest request, RequestNextDelegate<TRequest, TResponse> next)
+    {
+        Called = true;
+        return next.Invoke(request);
+    }
+    public static void Reset() => Called = false;
+}
+
 #endregion
 
 /// <summary>
@@ -103,6 +158,9 @@ public class TaggedRequestTests
         {
             cfg.RequireEventHandlers = false;
             cfg.RegisterHandlers(typeof(TaggedRequestTests).Assembly);
+            cfg.RegisterMiddleware(typeof(AdminTaggedMiddleware<,>), ServiceLifetime.Singleton);
+            cfg.RegisterMiddleware(typeof(UserTaggedMiddleware<,>), ServiceLifetime.Singleton);
+            cfg.RegisterMiddleware(typeof(UntaggedMiddleware<,>), ServiceLifetime.Singleton);
         });
         _requestum = services.BuildServiceProvider().GetRequiredService<IRequestum>();
     }
@@ -205,6 +263,165 @@ public class TaggedRequestTests
         Assert.Throws<RequestumException>(() => _requestum.Handle<TaggedTestQuery, TestResponse>(query));
         Assert.False(AdminTaggedQueryHandler.Executed);
         Assert.False(UserTaggedQueryHandler.Executed);
+    }
+
+    #endregion
+
+    #region Middleware Tests
+
+    [Fact]
+    public void Execute_TaggedCommand_WithAdminTag_CallsAdminMiddlewareAndUntagged()
+    {
+        // Arrange
+        AdminTaggedMiddleware<TaggedTestCommand, EmptyResponse>.Reset();
+        UserTaggedMiddleware<TaggedTestCommand, EmptyResponse>.Reset();
+        UntaggedMiddleware<TaggedTestCommand, EmptyResponse>.Reset();
+        var command = new TaggedTestCommand("admin");
+
+        // Act
+        _requestum.Execute(command);
+
+        // Assert
+        Assert.True(AdminTaggedMiddleware<TaggedTestCommand, EmptyResponse>.Called, "Admin middleware should be called for admin tag");
+        Assert.False(UserTaggedMiddleware<TaggedTestCommand, EmptyResponse>.Called, "User middleware should NOT be called for admin tag");
+        Assert.True(UntaggedMiddleware<TaggedTestCommand, EmptyResponse>.Called, "Untagged middleware should always be called");
+    }
+
+    [Fact]
+    public void Execute_TaggedCommand_WithUserTag_CallsUserMiddlewareAndUntagged()
+    {
+        // Arrange
+        AdminTaggedMiddleware<TaggedTestCommand, EmptyResponse>.Reset();
+        UserTaggedMiddleware<TaggedTestCommand, EmptyResponse>.Reset();
+        UntaggedMiddleware<TaggedTestCommand, EmptyResponse>.Reset();
+        var command = new TaggedTestCommand("user");
+
+        // Act
+        _requestum.Execute(command);
+
+        // Assert
+        Assert.False(AdminTaggedMiddleware<TaggedTestCommand, EmptyResponse>.Called, "Admin middleware should NOT be called for user tag");
+        Assert.True(UserTaggedMiddleware<TaggedTestCommand, EmptyResponse>.Called, "User middleware should be called for user tag");
+        Assert.True(UntaggedMiddleware<TaggedTestCommand, EmptyResponse>.Called, "Untagged middleware should always be called");
+    }
+
+    [Fact]
+    public void Handle_TaggedQuery_WithAdminTag_CallsAdminMiddlewareAndUntagged()
+    {
+        // Arrange
+        AdminTaggedMiddleware<TaggedTestQuery, TestResponse>.Reset();
+        UserTaggedMiddleware<TaggedTestQuery, TestResponse>.Reset();
+        UntaggedMiddleware<TaggedTestQuery, TestResponse>.Reset();
+        var query = new TaggedTestQuery("admin");
+
+        // Act
+        var result = _requestum.Handle<TaggedTestQuery, TestResponse>(query);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.True(AdminTaggedMiddleware<TaggedTestQuery, TestResponse>.Called, "Admin middleware should be called for admin tag");
+        Assert.False(UserTaggedMiddleware<TaggedTestQuery, TestResponse>.Called, "User middleware should NOT be called for admin tag");
+        Assert.True(UntaggedMiddleware<TaggedTestQuery, TestResponse>.Called, "Untagged middleware should always be called");
+    }
+
+    [Fact]
+    public void Handle_TaggedQuery_WithUserTag_CallsUserMiddlewareAndUntagged()
+    {
+        // Arrange
+        AdminTaggedMiddleware<TaggedTestQuery, TestResponse>.Reset();
+        UserTaggedMiddleware<TaggedTestQuery, TestResponse>.Reset();
+        UntaggedMiddleware<TaggedTestQuery, TestResponse>.Reset();
+        var query = new TaggedTestQuery("user");
+
+        // Act
+        var result = _requestum.Handle<TaggedTestQuery, TestResponse>(query);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(AdminTaggedMiddleware<TaggedTestQuery, TestResponse>.Called, "Admin middleware should NOT be called for user tag");
+        Assert.True(UserTaggedMiddleware<TaggedTestQuery, TestResponse>.Called, "User middleware should be called for user tag");
+        Assert.True(UntaggedMiddleware<TaggedTestQuery, TestResponse>.Called, "Untagged middleware should always be called");
+    }
+
+    [Fact]
+    public void Execute_TaggedCommandWithResult_WithAdminTag_CallsAdminMiddleware()
+    {
+        // Arrange
+        AdminTaggedMiddleware<TaggedTestCommandWithResult, int>.Reset();
+        UserTaggedMiddleware<TaggedTestCommandWithResult, int>.Reset();
+        var command = new TaggedTestCommandWithResult("admin", 10);
+
+        // Act
+        var result = _requestum.Execute<TaggedTestCommandWithResult, int>(command);
+
+        // Assert
+        Assert.Equal(20, result);
+        Assert.True(AdminTaggedMiddleware<TaggedTestCommandWithResult, int>.Called, "Admin middleware should be called for admin tag");
+        Assert.False(UserTaggedMiddleware<TaggedTestCommandWithResult, int>.Called, "User middleware should NOT be called for admin tag");
+    }
+
+    [Fact]
+    public void Execute_TaggedCommandWithResult_WithUserTag_CallsUserMiddleware()
+    {
+        // Arrange
+        AdminTaggedMiddleware<TaggedTestCommandWithResult, int>.Reset();
+        UserTaggedMiddleware<TaggedTestCommandWithResult, int>.Reset();
+        var command = new TaggedTestCommandWithResult("user", 15);
+
+        // Act
+        var result = _requestum.Execute<TaggedTestCommandWithResult, int>(command);
+
+        // Assert
+        Assert.Equal(30, result);
+        Assert.False(AdminTaggedMiddleware<TaggedTestCommandWithResult, int>.Called, "Admin middleware should NOT be called for user tag");
+        Assert.True(UserTaggedMiddleware<TaggedTestCommandWithResult, int>.Called, "User middleware should be called for user tag");
+    }
+
+    [Fact]
+    public void Execute_DifferentTaggedCommands_IsolatesMiddlewareExecution()
+    {
+        // Arrange
+        AdminTaggedMiddleware<TaggedTestCommand, EmptyResponse>.Reset();
+        UserTaggedMiddleware<TaggedTestCommand, EmptyResponse>.Reset();
+        UntaggedMiddleware<TaggedTestCommand, EmptyResponse>.Reset();
+        var adminCommand = new TaggedTestCommand("admin");
+        var userCommand = new TaggedTestCommand("user");
+
+        // Act
+        _requestum.Execute(adminCommand);
+        AdminTaggedMiddleware<TaggedTestCommand, EmptyResponse>.Reset();
+        UserTaggedMiddleware<TaggedTestCommand, EmptyResponse>.Reset();
+        UntaggedMiddleware<TaggedTestCommand, EmptyResponse>.Reset();
+        _requestum.Execute(userCommand);
+
+        // Assert
+        Assert.False(AdminTaggedMiddleware<TaggedTestCommand, EmptyResponse>.Called, "Admin middleware should NOT be called for user command");
+        Assert.True(UserTaggedMiddleware<TaggedTestCommand, EmptyResponse>.Called, "User middleware should be called for user command");
+        Assert.True(UntaggedMiddleware<TaggedTestCommand, EmptyResponse>.Called, "Untagged middleware should be called");
+    }
+
+    [Fact]
+    public void Handle_DifferentTaggedQueries_IsolatesMiddlewareExecution()
+    {
+        // Arrange
+        AdminTaggedMiddleware<TaggedTestQuery, TestResponse>.Reset();
+        UserTaggedMiddleware<TaggedTestQuery, TestResponse>.Reset();
+        UntaggedMiddleware<TaggedTestQuery, TestResponse>.Reset();
+        var adminQuery = new TaggedTestQuery("admin");
+        var userQuery = new TaggedTestQuery("user");
+
+        // Act
+        _requestum.Handle<TaggedTestQuery, TestResponse>(adminQuery);
+        AdminTaggedMiddleware<TaggedTestQuery, TestResponse>.Reset();
+        UserTaggedMiddleware<TaggedTestQuery, TestResponse>.Reset();
+        UntaggedMiddleware<TaggedTestQuery, TestResponse>.Reset();
+        var result = _requestum.Handle<TaggedTestQuery, TestResponse>(userQuery);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(AdminTaggedMiddleware<TaggedTestQuery, TestResponse>.Called, "Admin middleware should NOT be called for user query");
+        Assert.True(UserTaggedMiddleware<TaggedTestQuery, TestResponse>.Called, "User middleware should be called for user query");
+        Assert.True(UntaggedMiddleware<TaggedTestQuery, TestResponse>.Called, "Untagged middleware should be called");
     }
 
     #endregion
