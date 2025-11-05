@@ -71,7 +71,7 @@ public class ProcessMessageCommandWithResultHandler : IAsyncCommandHandler<Proce
 /// </summary>
 public class CommandWithResultTests
 {
-    private readonly RequestumCore _requestum;
+    private readonly IRequestum _requestum;
 
     public CommandWithResultTests()
     {
@@ -83,7 +83,7 @@ public class CommandWithResultTests
         });
 
         var provider = services.BuildServiceProvider();
-        _requestum = (RequestumCore)provider.GetRequiredService<IRequestum>();
+        _requestum = provider.GetRequiredService<IRequestum>();
     }
 
     [Fact]
