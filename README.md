@@ -31,6 +31,14 @@ dotnet add package Requestum
 
 ---
 
+## 🆕 What's New in 1.2.0
+
+* 🏷️ **Request Tags** - flexible filtering of handlers and middlewares using custom tags
+* 🎯 **Selective Execution** - choose specific handlers and middlewares for requests based on tags
+* 📤 **Commands with Results** - added `IRequestum` methods for executing commands that return values (`ExecuteAsync<TCommand, TResponse>` and `Execute<TCommand, TResponse>`)
+
+---
+
 ## 🤔 Why Requestum?
 
 **Explicit CQRS separation:**
