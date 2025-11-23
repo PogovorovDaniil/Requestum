@@ -173,4 +173,25 @@ public interface IRequestum
         where TMessage : IEventMessage, new();
 
     #endregion
+
+    #region Policy
+
+    /// <summary>
+    /// Adds a retry policy for the specified asynchronous handler,
+    /// defining how many times it should be re-attempted if it fails.
+    /// </summary>
+    /// <param name="type">The handler type for which retries are configured.</param>
+    /// <param name="retryCount">The number of retry attempts.</param>
+    void AddHandlerRetry(Type type, int retryCount);
+
+    /// <summary>
+    /// Sets an execution timeout for the specified asynchronous handler.
+    /// If the handler runs longer than the provided duration,
+    /// a <see cref="TimeoutException"/> will be thrown.
+    /// </summary>
+    /// <param name="type">The handler type for which the timeout is configured.</param>
+    /// <param name="timeout">The maximum allowed execution time.</param>
+    void AddHandlerTimeout(Type type, TimeSpan timeout);
+
+    #endregion
 }

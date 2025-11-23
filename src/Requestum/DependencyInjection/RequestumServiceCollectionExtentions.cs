@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection.Extensions;
 using Requestum;
 using Requestum.Contract;
+using Requestum.Policy;
 using System.Reflection;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -53,24 +54,6 @@ public static class RequestumServiceCollectionExtentions
     private static IEnumerable<string> GetMiddlewareTags(Type handlerType) => handlerType
         .GetCustomAttributes<MiddlewareTagAttribute>().Select(a => a.Tag);
 
-    /// <summary>
-    /// Registers all handler types found in the specified assemblies with the dependency injection container.
-    /// </summary>
-    /// <param name="services">The <see cref="IServiceCollection"/> to add services to.</param>
-    /// <param name="serviceLifetime">The service lifetime for the registered handlers.</param>
-    /// <param name="assemblies">The assemblies to scan for handler types.</param>
-    /// <remarks>
-    /// Event message receivers are registered as enumerable services to support multiple handlers per event.
-    /// Command and query handlers are registered as single services (one handler per request type).
-    /// </remarks>
-    public static void RegisterHandlers(IServiceCollection services, ServiceLifetime serviceLifetime, IEnumerable<Assembly> assemblies)
-    {
-        foreach (var handlerType in GetHandlerTypes(assemblies))
-        {
-            RegisterHandler(services, serviceLifetime, handlerType);
-        }
-    }
-
     private static void RegisterHandler(IServiceCollection services, ServiceLifetime serviceLifetime, Type handlerType)
     {
         foreach (var requestType in GetHandlerRequestTypes(handlerType))
@@ -88,23 +71,8 @@ public static class RequestumServiceCollectionExtentions
             {
                 services.TryAddEnumerable(new ServiceDescriptor(typeof(IBaseHandler<>).MakeGenericType(requestType), handlerType, serviceLifetime));
             }
-        }
-    }
 
-    /// <summary>
-    /// Registers all middleware types found in the specified assemblies with the dependency injection container.
-    /// </summary>
-    /// <param name="services">The <see cref="IServiceCollection"/> to add services to.</param>
-    /// <param name="serviceLifetime">The service lifetime for the registered middlewares.</param>
-    /// <param name="assemblies">The assemblies to scan for middleware types.</param>
-    /// <remarks>
-    /// Middlewares are registered as enumerable services to support multiple middlewares in the pipeline.
-    /// </remarks>
-    public static void RegisterMiddlewares(IServiceCollection services, ServiceLifetime serviceLifetime, IEnumerable<Assembly> assemblies)
-    {
-        foreach (var middlewareType in GetMiddlewareTypes(assemblies))
-        {
-            RegisterMiddleware(services, serviceLifetime, middlewareType);
+            services.TryAddEnumerable(new ServiceDescriptor(typeof(IBaseHandler), handlerType, serviceLifetime));
         }
     }
 
@@ -154,6 +122,7 @@ public static class RequestumServiceCollectionExtentions
         var cfg = new RequestumServiceConfiguration();
         configurationBuilder?.Invoke(cfg);
 
+        cfg.CustomHandlers.AddRange(GetHandlerTypes(cfg.HandlerAssemblies).Select(t => (t, cfg.Lifetime)));
         foreach (var service in cfg.CustomHandlers)
         {
             if (service.Lifetime == ServiceLifetime.Scoped && cfg.Lifetime != ServiceLifetime.Scoped)
@@ -162,6 +131,7 @@ public static class RequestumServiceCollectionExtentions
             RegisterHandler(services, service.Lifetime, service.HandlerType);
         }
 
+        cfg.CustomMiddlewares.AddRange(GetMiddlewareTypes(cfg.MiddlewareAssemblies).Select(t => (t, cfg.Lifetime)));
         foreach (var service in cfg.CustomMiddlewares)
         {
             if (service.Lifetime == ServiceLifetime.Scoped && cfg.Lifetime != ServiceLifetime.Scoped)
@@ -169,9 +139,6 @@ public static class RequestumServiceCollectionExtentions
 
             RegisterMiddleware(services, service.Lifetime, service.MiddlewareType);
         }
-
-        RegisterHandlers(services, cfg.Lifetime, cfg.HandlerAssemblies);
-        RegisterMiddlewares(services, cfg.Lifetime, cfg.MiddlewareAssemblies);
 
         services.TryAdd(new ServiceDescriptor(typeof(IRequestum), serviceProvider =>
         {
@@ -183,5 +150,24 @@ public static class RequestumServiceCollectionExtentions
         }, cfg.Lifetime));
 
         return services;
+    }
+
+    public static IServiceProvider AutoRegisterRequestumPolicies(this IServiceProvider serviceProvider)
+    {
+        IRequestum requestum = serviceProvider.GetService<IRequestum>()!;
+        var handlers = serviceProvider.GetServices<IBaseHandler>() ?? [];
+
+        foreach (var handler in handlers)
+        {
+            var type = handler.GetType();
+
+            RetryAttribute? retry;
+            if ((retry = type.GetCustomAttribute<RetryAttribute>()) is not null) requestum.AddHandlerRetry(type, retry.RetryCount);
+
+            TimeoutAttribute? timeout;
+            if ((timeout = type.GetCustomAttribute<TimeoutAttribute>()) is not null) requestum.AddHandlerTimeout(type, TimeSpan.FromMilliseconds(timeout.Timeout));
+        }
+
+        return serviceProvider;
     }
 }

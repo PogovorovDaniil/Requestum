@@ -12,12 +12,12 @@ public partial class RequestumCore
         switch (handler)
         {
             case IAsyncCommandHandler<TCommand> asyncCommandHandler:
-                BuildCommandMiddleware(new CommandMiddlewareAsyncDelegate<TCommand>(asyncCommandHandler), command)
+                BuildCommandMiddleware(new CommandMiddlewareAsyncDelegate<TCommand>(asyncCommandHandler), handler.GetType(), command)
                     .Invoke(command)
                     .Wait();
                 return;
             case ICommandHandler<TCommand> commandHandler:
-                BuildCommandMiddleware(new CommandMiddlewareDelegate<TCommand>(commandHandler), command)
+                BuildCommandMiddleware(new CommandMiddlewareDelegate<TCommand>(commandHandler), handler.GetType(), command)
                     .Invoke(command)
                     .Wait();
                 return;
@@ -33,10 +33,10 @@ public partial class RequestumCore
         switch (handler)
         {
             case IAsyncCommandHandler<TCommand> asyncCommandHandler:
-                return BuildCommandMiddleware(new CommandMiddlewareAsyncDelegate<TCommand>(asyncCommandHandler), command)
+                return BuildCommandMiddleware(new CommandMiddlewareAsyncDelegate<TCommand>(asyncCommandHandler), handler.GetType(), command)
                     .Invoke(command, cancellationToken);
             case ICommandHandler<TCommand> commandHandler:
-                return BuildCommandMiddleware(new CommandMiddlewareDelegate<TCommand>(commandHandler), command)
+                return BuildCommandMiddleware(new CommandMiddlewareDelegate<TCommand>(commandHandler), handler.GetType(), command)
                     .Invoke(command, cancellationToken);
             default:
                 throw new RequestumException($"No handler registered for command type '{typeof(TCommand).Name}'.");
@@ -50,12 +50,12 @@ public partial class RequestumCore
         return handler switch
         {
             ICommandHandler<TCommand, TResponse> commandHandler =>
-                BuildCommandMiddleware(new CommandMiddlewareDelegate<TCommand, TResponse>(commandHandler), command)
+                BuildCommandMiddleware(new CommandMiddlewareDelegate<TCommand, TResponse>(commandHandler), handler.GetType(), command)
                     .Invoke(command)
                     .GetAwaiter()
                     .GetResult()!,
             IAsyncCommandHandler<TCommand, TResponse> asyncCommandHandler =>
-                BuildCommandMiddleware(new CommandMiddlewareAsyncDelegate<TCommand, TResponse>(asyncCommandHandler), command)
+                BuildCommandMiddleware(new CommandMiddlewareAsyncDelegate<TCommand, TResponse>(asyncCommandHandler), handler.GetType(), command)
                     .Invoke(command)
                     .GetAwaiter()
                     .GetResult()!,
@@ -70,10 +70,10 @@ public partial class RequestumCore
         return handler switch
         {
             ICommandHandler<TCommand, TResponse> commandHandler =>
-                BuildCommandMiddleware(new CommandMiddlewareDelegate<TCommand, TResponse>(commandHandler), command)
+                BuildCommandMiddleware(new CommandMiddlewareDelegate<TCommand, TResponse>(commandHandler), handler.GetType(), command)
                     .Invoke(command),
             IAsyncCommandHandler<TCommand, TResponse> asyncCommandHandler =>
-                BuildCommandMiddleware(new CommandMiddlewareAsyncDelegate<TCommand, TResponse>(asyncCommandHandler), command)
+                BuildCommandMiddleware(new CommandMiddlewareAsyncDelegate<TCommand, TResponse>(asyncCommandHandler), handler.GetType(), command)
                     .Invoke(command),
             _ => throw new RequestumException($"No handler registered for command type '{typeof(TCommand).Name}'."),
         };

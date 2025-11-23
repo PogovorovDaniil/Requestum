@@ -9,13 +9,22 @@ namespace Requestum;
 public sealed partial class RequestumCore(IServiceProvider serviceProvider) : IRequestum
 {
     private static ConcurrentDictionary<Type, object> cachedRequests = [];
+    private static Dictionary<Type, int> retryPolicy = [];
+    private static Dictionary<Type, TimeSpan> timeoutPolicy = [];
+
     public string[] GlobalTags { get; init; } = [];
     public bool RequireEventHandlers { get; internal set; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private IMiddlewareDelegate<TRequest, TResponse> BuildCommandMiddleware<TRequest, TResponse>(IMiddlewareDelegate<TRequest, TResponse> middlewareDelegate, TRequest request)
+    private IMiddlewareDelegate<TRequest, TResponse> BuildCommandMiddleware<TRequest, TResponse>(IMiddlewareDelegate<TRequest, TResponse> middlewareDelegate, Type handlerType, TRequest request)
     {
         var baseMiddlewares = serviceProvider.GetServices<IBaseCommandMiddleware<TRequest, TResponse>>();
+
+        if (timeoutPolicy.TryGetValue(handlerType, out var timeout))
+            middlewareDelegate = new MiddlewareTimeoutAsyncDelegate<TRequest, TResponse>(timeout, middlewareDelegate);
+
+        if (retryPolicy.TryGetValue(handlerType, out var retryCount))
+            middlewareDelegate = new MiddlewareRetryAsyncDelegate<TRequest, TResponse>(retryCount, middlewareDelegate);
 
         string[] tags = request is ITaggedRequest taggedRequest ? taggedRequest.Tags : [];
         if (tags.Length + GlobalTags.Length > 0)
@@ -40,9 +49,15 @@ public sealed partial class RequestumCore(IServiceProvider serviceProvider) : IR
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private IMiddlewareDelegate<TRequest, TResponse> BuildQueryMiddleware<TRequest, TResponse>(IMiddlewareDelegate<TRequest, TResponse> middlewareDelegate, TRequest request)
+    private IMiddlewareDelegate<TRequest, TResponse> BuildQueryMiddleware<TRequest, TResponse>(IMiddlewareDelegate<TRequest, TResponse> middlewareDelegate, Type handlerType, TRequest request)
     {
         var baseMiddlewares = serviceProvider.GetServices<IBaseQueryMiddleware<TRequest, TResponse>>();
+
+        if (timeoutPolicy.TryGetValue(handlerType, out var timeout))
+            middlewareDelegate = new MiddlewareTimeoutAsyncDelegate<TRequest, TResponse>(timeout, middlewareDelegate);
+
+        if (retryPolicy.TryGetValue(handlerType, out var retryCount))
+            middlewareDelegate = new MiddlewareRetryAsyncDelegate<TRequest, TResponse>(retryCount, middlewareDelegate);
 
         string[] tags = request is ITaggedRequest taggedRequest ? taggedRequest.Tags : [];
         if (tags.Length + GlobalTags.Length > 0)
@@ -103,4 +118,7 @@ public sealed partial class RequestumCore(IServiceProvider serviceProvider) : IR
         }
         return handlers;
     }
+
+    public void AddHandlerRetry(Type type, int retryCount) => retryPolicy[type] = retryCount;
+    public void AddHandlerTimeout(Type type, TimeSpan timeout) => timeoutPolicy[type] = timeout;
 }

@@ -30,6 +30,10 @@ dotnet add package Requestum
 ```
 
 ---
+## 🆕 What's New in 1.2.2
+
+* 🔁 **Retry Attribute** — allows specifying retry logic directly on handlers  
+* ⏱️ **Timeout Attribute** — allows defining a maximum execution time for asynchronous handlers, throwing `TimeoutException` if exceeded  
 
 ## 🆕 What's New in 1.2.0
 
