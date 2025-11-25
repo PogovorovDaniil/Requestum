@@ -1,14 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
 	<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 
 	<PackageId>Requestum</PackageId>
-	<Version>1.2.2</Version>
+	<Version>1.2.3</Version>
 	<Authors>Daniil Pogovorov</Authors>
 
 	<Description>Requestum is a lightweight and explicit CQRS library for .NET, providing a structured approach to handling commands, queries, and middlewares with strong typing and dependency injection support.</Description>
@@ -38,6 +38,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="[10.0.0, )" />
   </ItemGroup>
 </Project>
