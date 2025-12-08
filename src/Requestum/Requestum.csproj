@@ -8,7 +8,7 @@
 	<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 
 	<PackageId>Requestum</PackageId>
-	<Version>1.2.3</Version>
+	<Version>1.2.4</Version>
 	<Authors>Daniil Pogovorov</Authors>
 
 	<Description>Requestum is a lightweight and explicit CQRS library for .NET, providing a structured approach to handling commands, queries, and middlewares with strong typing and dependency injection support.</Description>
@@ -23,12 +23,6 @@
 	<PackageTags>cqrs;command;query;middleware;request;pipeline;clean-architecture;dotnet;csharp;dependency-injection</PackageTags>
 	<PackageReadmeFile>README.md</PackageReadmeFile>
 	<PackageIcon>icon.png</PackageIcon>
-	<PackageReleaseNotes>
-		v1.2.0:
-		- Added request tags for flexible filtering of handlers and middlewares
-		- Selective execution: choose specific handlers and middlewares based on tags
-		- Added IRequestum methods for commands with results (ExecuteAsync&lt;TCommand, TResponse&gt; and Execute&lt;TCommand, TResponse&gt;)
-	</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -39,5 +33,6 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Options" Version="[10.0.0, )" />
+	<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="[10.0.0, )" />
   </ItemGroup>
 </Project>

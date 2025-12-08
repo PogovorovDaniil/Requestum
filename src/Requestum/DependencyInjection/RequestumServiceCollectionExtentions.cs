@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Requestum;
 using Requestum.Contract;
 using Requestum.Policy;
@@ -146,6 +147,7 @@ public static class RequestumServiceCollectionExtentions
             {
                 RequireEventHandlers = cfg.RequireEventHandlers,
                 GlobalTags = cfg.GlobalTags,
+                Logger = cfg.NeedLogging ? serviceProvider.GetRequiredService<ILogger<IRequestum>>() : null,
             };
         }, cfg.Lifetime));
 

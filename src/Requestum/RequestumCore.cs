@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Requestum.Contract;
 using Requestum.Middleware;
+using Requestum.Middleware.Application;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 
@@ -14,6 +16,8 @@ public sealed partial class RequestumCore(IServiceProvider serviceProvider) : IR
 
     public string[] GlobalTags { get; init; } = [];
     public bool RequireEventHandlers { get; internal set; }
+    public ILogger? Logger { get; init; } = null;
+
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private IMiddlewareDelegate<TRequest, TResponse> BuildCommandMiddleware<TRequest, TResponse>(IMiddlewareDelegate<TRequest, TResponse> middlewareDelegate, Type handlerType, TRequest request)
@@ -22,6 +26,9 @@ public sealed partial class RequestumCore(IServiceProvider serviceProvider) : IR
 
         if (timeoutPolicy.TryGetValue(handlerType, out var timeout))
             middlewareDelegate = new MiddlewareTimeoutAsyncDelegate<TRequest, TResponse>(timeout, middlewareDelegate);
+
+        if (Logger is not null)
+            middlewareDelegate = new MiddlewareLoggingAsyncDelegate<TRequest, TResponse>(Logger, middlewareDelegate);
 
         if (retryPolicy.TryGetValue(handlerType, out var retryCount))
             middlewareDelegate = new MiddlewareRetryAsyncDelegate<TRequest, TResponse>(retryCount, middlewareDelegate);
@@ -55,6 +62,9 @@ public sealed partial class RequestumCore(IServiceProvider serviceProvider) : IR
 
         if (timeoutPolicy.TryGetValue(handlerType, out var timeout))
             middlewareDelegate = new MiddlewareTimeoutAsyncDelegate<TRequest, TResponse>(timeout, middlewareDelegate);
+
+        if (Logger is not null)
+            middlewareDelegate = new MiddlewareLoggingAsyncDelegate<TRequest, TResponse>(Logger, middlewareDelegate);
 
         if (retryPolicy.TryGetValue(handlerType, out var retryCount))
             middlewareDelegate = new MiddlewareRetryAsyncDelegate<TRequest, TResponse>(retryCount, middlewareDelegate);

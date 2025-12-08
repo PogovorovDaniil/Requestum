@@ -38,6 +38,16 @@ public sealed class RequestumServiceConfiguration
     /// </value>
     public string[] GlobalTags { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets a value indicating whether logging is enabled for request processing.
+    /// When <c>true</c>, Requestum will log information about request execution.
+    /// Default value is <c>false</c>.
+    /// </summary>
+    /// <value>
+    /// <c>true</c> if logging is enabled; otherwise, <c>false</c>.
+    /// </value>
+    public bool NeedLogging { get; internal set; } = false;
+
     internal List<Assembly> HandlerAssemblies { get; set; } = [];
     internal List<Assembly> MiddlewareAssemblies { get; set; } = [];
     internal List<Assembly> EventMessageAssemblies { get; set; } = [];
