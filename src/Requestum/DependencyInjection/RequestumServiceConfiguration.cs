@@ -46,7 +46,7 @@ public sealed class RequestumServiceConfiguration
     /// <value>
     /// <c>true</c> if logging is enabled; otherwise, <c>false</c>.
     /// </value>
-    public bool NeedLogging { get; internal set; } = false;
+    public bool NeedLogging { get; set; } = false;
 
     internal List<Assembly> HandlerAssemblies { get; set; } = [];
     internal List<Assembly> MiddlewareAssemblies { get; set; } = [];
