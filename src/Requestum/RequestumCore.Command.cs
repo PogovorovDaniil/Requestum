@@ -63,7 +63,7 @@ public partial class RequestumCore
         };
     }
 
-    public Task<TResponse> ExecuteAsync<TCommand, TResponse>(TCommand command)
+    public Task<TResponse> ExecuteAsync<TCommand, TResponse>(TCommand command, CancellationToken cancellationToken = default)
         where TCommand : ICommand<TResponse>
     {
         var handler = GetHandler(command);
@@ -71,10 +71,10 @@ public partial class RequestumCore
         {
             ICommandHandler<TCommand, TResponse> commandHandler =>
                 BuildCommandMiddleware(new CommandMiddlewareDelegate<TCommand, TResponse>(commandHandler), handler.GetType(), command)
-                    .Invoke(command),
+                    .Invoke(command, cancellationToken),
             IAsyncCommandHandler<TCommand, TResponse> asyncCommandHandler =>
                 BuildCommandMiddleware(new CommandMiddlewareAsyncDelegate<TCommand, TResponse>(asyncCommandHandler), handler.GetType(), command)
-                    .Invoke(command),
+                    .Invoke(command, cancellationToken),
             _ => throw new RequestumException($"No handler registered for command type '{typeof(TCommand).Name}'."),
         };
     }

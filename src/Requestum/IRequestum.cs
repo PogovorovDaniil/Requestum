@@ -59,7 +59,7 @@ public interface IRequestum
     /// <typeparam name="TResponse">The response type.</typeparam>
     /// <param name="command">The command to execute.</param>
     /// <returns>The command response.</returns>
-    Task<TResponse> ExecuteAsync<TCommand, TResponse>(TCommand command)
+    Task<TResponse> ExecuteAsync<TCommand, TResponse>(TCommand command, CancellationToken cancellationToken = default)
         where TCommand : ICommand<TResponse>;
 
     /// <summary>

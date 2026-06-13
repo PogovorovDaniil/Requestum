@@ -11,7 +11,7 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// Delegate for configuring Requestum services.
 /// </summary>
 /// <param name="cfg">The <see cref="RequestumServiceConfiguration"/> instance to configure.</param>
-public delegate void RequestumServiceConfigConfigurationBuilder(RequestumServiceConfiguration cfg);
+public delegate void RequestumServiceConfigurationBuilder(RequestumServiceConfiguration cfg);
 
 /// <summary>
 /// Extension methods for <see cref="IServiceCollection"/> to register Requestum services.
@@ -118,7 +118,7 @@ public static class RequestumServiceCollectionExtentions
     /// });
     /// </code>
     /// </example>
-    public static IServiceCollection AddRequestum(this IServiceCollection services, RequestumServiceConfigConfigurationBuilder? configurationBuilder)
+    public static IServiceCollection AddRequestum(this IServiceCollection services, RequestumServiceConfigurationBuilder? configurationBuilder)
     {
         var cfg = new RequestumServiceConfiguration();
         configurationBuilder?.Invoke(cfg);
